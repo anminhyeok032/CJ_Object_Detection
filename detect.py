@@ -162,15 +162,18 @@ def run(
           if str_iou_coordinate[0] == ls_temp[i][0]:
             temp_iou.append(round(ioU(str_iou_coordinate,ls_temp[i]),2))
 
-            # 사각형 그리기
-            x1, y1, x2, y2 = map(int, str_iou_coordinate[1:5])
-            label = labels.loc[int(str_iou_coordinate[0])]["이름"]
-            annotator.box_label([x1, y1, x2, y2], color=(0, 0, 0))
+        # 사각형 그리기
+        x1, y1, x2, y2 = map(int, str_iou_coordinate[1:5])
+        label = labels.loc[int(str_iou_coordinate[0])]["이름"]
+        annotator.box_label([x1, y1, x2, y2], color=(0, 0, 255))  # 빨간색으로 기존 물체 bounding box
 
         print(f'{str_iou_coordinates.index(str_iou_coordinate)+1} / {len(str_iou_coordinates)} 결과')    
-        print(temp_iou)
-        print([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])    
-        productList.append([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])
+        if temp_iou:
+          print(temp_iou)
+          print([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])    
+          productList.append([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])
+        else:
+          print("*** 같은 클래스의 Object가 없습니다! ***")
 
       im0 = annotator.result()  
 
@@ -272,7 +275,7 @@ def run(
                       cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
                   cv2.imshow(str(p), im0)
                   cv2.waitKey(1)  # 1 millisecond
-              im0 = ioU_index(ls_temp)
+              im0 = ioU_index(ls_temp) # 처음 박스를 그리고 위에 기존 박스 위치 그려줌
 
             # Save results (image with detections)
             if save_img:
