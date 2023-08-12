@@ -132,19 +132,52 @@ def run(
 
     # 제공된 좌표 값의 라벨이 인덱스 일 때
     def ioU_index(ls_temp):
-      filename = "/content/yolov5/iou_index.xlsx" #파일명
-      book = openpyxl.load_workbook(filename)
-      sheet=book.worksheets[0]
-      iou_coordinates = [] #리스트 자료형 생성
-      for row in sheet.rows: #전체 행에 대하여 반복실행
-        iou_coordinates.append([
-            row[0].value, #1열 데이터
-            row[1].value, #2열 데이터
-            row[2].value, #3열 데이터
-            row[3].value, #4열 데이터
-            row[4].value, #5열 데이터
-        ])
-      iou_coordinates.pop(0)
+      filename = "/content/yolov5/iou_index.txt" #파일명
+      filename_check = filename.split('.')
+      
+      if filename_check[1] == "xlsx":   # 엑셀 파일일 때
+        book = openpyxl.load_workbook(filename)
+        sheet=book.worksheets[0]
+        iou_coordinates = [] #리스트 자료형 생성
+
+        for i, row in enumerate(sheet.rows): #전체 행에 대하여 반복실행
+          # 만약 좌표가 x1y1, x2y2 기준으로 제공될 경우 아래부분은 주석후 사용할 것
+          # ***왼쪽 위와 오른쪽 아래 꼭짓점 기준***
+          iou_coordinates.append([
+              row[0].value, #1열 데이터
+              row[1].value, #2열 데이터
+              row[2].value, #3열 데이터
+              row[3].value, #4열 데이터
+              row[4].value, #5열 데이터
+          ])
+
+          # ***왼쪽 위 꼭짓점 기준***
+          # x,y,w,h, 기준 제공될 경우
+          if i != 0:   # ***첫 줄에 아무표시 없을시 삭제***
+            iou_coordinates[i][3] = iou_coordinates[i][1] + iou_coordinates[i][3] # width
+            iou_coordinates[i][4] = iou_coordinates[i][2] + iou_coordinates[i][4] # height
+
+        iou_coordinates.pop(0)  # ***첫 줄에 아무표시 없을시 삭제***
+
+      elif filename_check[1] == "txt":    # txt 파일일 때
+        with open(filename, 'r') as file:
+          lines = file.readlines()
+
+        # 문자열 처리 및 리스트에 저장
+        iou_coordinates = [] # 리스트 자료형 생성
+        for i,line in enumerate(lines):
+          line = line.replace(',', '').replace('"', '').replace("'", "")
+          values = line.strip().split()  # 띄어쓰기 기준으로 문자열 분리하여 리스트로 변환
+          iou_coordinates.append(values)
+
+          # ***왼쪽 위 꼭짓점 기준***
+          # x,y,w,h, 기준 제공될 경우
+          if i != 0:   # ***첫 줄에 아무표시 없을시 삭제***
+            iou_coordinates[i][3] = int(iou_coordinates[i][1]) + int(iou_coordinates[i][3]) # width
+            iou_coordinates[i][4] = int(iou_coordinates[i][2]) + int(iou_coordinates[i][4]) # height
+        iou_coordinates.pop(0)  # ***첫 줄에 아무표시 없을시 삭제***
+        print(iou_coordinates)
+
       print('*** iou 계산을 위해 제공된 좌표 값 ***')
       str_iou_coordinates= []
       for iou_coordinate in iou_coordinates :
@@ -352,5 +385,3 @@ def main(opt):
 if __name__ == '__main__':
     opt = parse_opt()
     main(opt)
-
-
