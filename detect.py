@@ -22,6 +22,7 @@ import pandas as pd
 import openpyxl #패키지 불러오기
 
 labels = pd.read_excel('/content/yolov7/labels.xlsx',index_col='번호') # 라벨링 파일 가져오기
+DRIVE_PATH = "/content/drive/MyDrive/cj_data/"
 
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
@@ -94,8 +95,8 @@ def detect(save_img=False):
         print('*** 데이터 저장 완료 ***\n')
         print('result : cjproject_result.txt')
         
-    # 제공된 IoU 데이터를 통`해 결과값을 도출해내는 함수
-    def ioU_result(detBoxList, im0):
+    # 제공된 IoU 데이터를 통해 결과값을 도출해내는 함수
+    def ioU_result(detBoxList, im0):        
         iou_coordinates = [] #리스트 자료형 생성
         
         # with open으로 회사에서 제공된 iou계산을 위한 데이터 읽기
@@ -104,7 +105,8 @@ def detect(save_img=False):
                 line = f.readline()
                 if not line: # 텍스트 줄이 끝까지 이동했을 경우 break
                     break
-                list_coordinate = line.split("\t")
+                # list_coordinate = line.split("\t")
+                list_coordinate = line.strip().split() # 띄어쓰기 기준으로 문자열 분리하여 리스트로 변환
                 iou_coordinates.append(list_coordinate)
 
         # 배열 첫 번째(제목) 삭제
@@ -113,6 +115,9 @@ def detect(save_img=False):
         # 메모장에서 다음 줄로 넘어가는 역할인 좌표 값 마지막에 있는 '\n' 삭제
         iou_coordinates = [[element.strip() for element in row] for row in iou_coordinates]
 
+        for iou_coordinate in iou_coordinates:  # 제공된 iou 데이터 x, y, w, h 기준 제공시 xyxy로 변환
+          iou_coordinate[3] = int(iou_coordinate[1]) + int(iou_coordinate[3])
+          iou_coordinate[4] = int(iou_coordinate[2]) + int(iou_coordinate[4])
 
         print('*** iou 계산을 위해 제공된 좌표 값 ***')
         print(iou_coordinates)
@@ -120,33 +125,32 @@ def detect(save_img=False):
         print('*** 인식된 상품 좌표 값 ***')
         print(detBoxList)
 
-      productList = []
-      for iou_coordinate in iou_coordinates :
-        temp_iou = []
-        for i in range(0,len(detBoxList)):
-          if iou_coordinate[0] == detBoxList[i][0]:
-            temp_iou.append(round(ioU_calculate(iou_coordinate,detBoxList[i]),2))
+        productList = []
+        for iou_coordinate in iou_coordinates :
+          temp_iou = []
+          for i in range(0,len(detBoxList)):
+            if iou_coordinate[0] == detBoxList[i][0]:
+              temp_iou.append(round(ioU_calculate(iou_coordinate,detBoxList[i]),2))
 
-        # 사각형 그리기
-        x1, y1, x2, y2 = map(int, iou_coordinate[1:5])
-        label = labels.loc[int(iou_coordinate[0])]["이름"]
-        im0 = plot_one_box([x1, y1, x2, y2], im0, label=None, color=(0, 0, 255), line_thickness=1)  # 빨간색으로 기존 물체 bounding box
+          # 사각형 그리기
+          x1, y1, x2, y2 = map(int, iou_coordinate[1:5])
+          label = labels.loc[int(iou_coordinate[0])]["이름"]
+          im0 = plot_one_box([x1, y1, x2, y2], im0, label=None, color=(0, 0, 255), line_thickness=1)  # 빨간색으로 기존 물체 bounding box
 
-        # 결과 값 PRINT
-        print(f'{iou_coordinates.index(iou_coordinate)+1} / {len(iou_coordinates)} 결과')
-        if temp_iou:
-          print(temp_iou)
-          print([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])    
-          productList.append([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])
-        else:
-          print("*** 같은 클래스의 Object가 없습니다! ***")
+          # 결과 값 PRINT
+          print(f'{iou_coordinates.index(iou_coordinate)+1} / {len(iou_coordinates)} 결과')
+          if temp_iou:
+            print(temp_iou)
+            print([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])    
+            productList.append([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])
+          else:
+            print("*** 같은 클래스의 Object가 없습니다! ***")
 
-        # im0 = annotator.result()  
 
-        # 결과 값 TXT 파일로 추출
-        download_result_txt(productList)
+          # 결과 값 TXT 파일로 추출
+          download_result_txt(productList)
 
-      return im0
+        return im0
 
 
 
