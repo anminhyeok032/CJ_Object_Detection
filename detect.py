@@ -21,8 +21,8 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized,
 import pandas as pd
 import openpyxl #패키지 불러오기
 
-labels = pd.read_excel('/content/yolov7/labels.xlsx',index_col='번호') # 라벨링 파일 가져오기
-DRIVE_PATH = "/content/drive/MyDrive/cj_data/"
+labels = pd.read_excel('/content/yolov7/cj_data/labels.xlsx',index_col='번호') # 라벨링 파일 가져오기
+DRIVE_PATH = "/content/yolov7/cj_data/"
 
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
@@ -93,7 +93,7 @@ def detect(save_img=False):
             f.write(data)
         f.close()
         print('*** 데이터 저장 완료 ***\n')
-        print('result : cjproject_result.txt')
+        print('결과 .txt 파일 경로 :',DRIVE_PATH + 'cjproject_result.txt')
         
     # 제공된 IoU 데이터를 통해 결과값을 도출해내는 함수
     def ioU_result(detBoxList, im0):        
@@ -230,7 +230,6 @@ def detect(save_img=False):
                         # IoU 계산을 위해 잠시 리스트에 담기
                         coordinate[0] = names[int(cls)]
                         detBoxList.append(coordinate)
-                        print(detBoxList)
 
                         label = f'{(labels.loc[int(names[int(cls)])]["이름"])} {conf:.2f}'                  
                         im0 = plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
@@ -249,7 +248,7 @@ def detect(save_img=False):
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, im0)
-                    print(f" The image with the result is saved in: {save_path}")
+                    print(f"결과 .jpg 파일 경로 : /content/yolov7/{save_path}")
                 else:  # 'video' or 'stream'
                     if vid_path != save_path:  # new video
                         vid_path = save_path
