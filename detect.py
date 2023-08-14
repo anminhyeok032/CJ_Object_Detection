@@ -1,3 +1,7 @@
+"""
+사물을 인식한 후, 라운딩 박스를 그리고, 결과값을 도출해내는 DETECT 기능 파일
+최종 수정 일자 : 2023.08.14.
+"""
 import argparse
 import time
 from pathlib import Path
@@ -65,7 +69,7 @@ def detect(save_img=False):
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
 
     # IoU 계산 함수
-    def ioU(box1,box2):
+    def ioU_calculate(box1,box2):
       box1_area = (int(box1[3]) - int(box1[1]) + 1) * (int(box1[4]) - int(box1[2]) + 1)
       box2_area = (int(box2[3]) - int(box2[1]) + 1) * (int(box2[4]) - int(box2[2]) + 1)
                     
@@ -79,94 +83,73 @@ def detect(save_img=False):
       inter = w * h
       iou = inter / (box1_area + box2_area - inter)
       return iou
-
-    # 제공된 좌표 값의 라벨이 인덱스 일 때
-    def ioU_index(ls_temp, im0):
-      filename = "/content/yolov7/iou_index.txt" #파일명
-      filename_check = filename.split('.')
-      
-      if filename_check[1] == "xlsx":   # 엑셀 파일일 때
-        book = openpyxl.load_workbook(filename)
-        sheet=book.worksheets[0]
+        
+    # IoU 계산 값을 txt파일로 저장하는 함수
+    def download_result_txt (productList): 
+        f=open(DRIVE_PATH+'cjproject_result.txt','w')
+        for product in productList:
+            data=f'{product[0]} {product[1]}\n'
+            f.write(data)
+        f.close()
+        print('*** 데이터 저장 완료 ***\n')
+        print('result : cjproject_result.txt')
+        
+    # 제공된 IoU 데이터를 통`해 결과값을 도출해내는 함수
+    def ioU_result(detBoxList, im0):
+        # yolo 버전 7일 경우, iou 데이터 값 path
+        filename = "/content/yolov7/iou.txt"
+        # yolo 버전 5일 경우, iou 데이터 값 path
+        # filename = "/content/yolov5/iou.txt"
+        
         iou_coordinates = [] #리스트 자료형 생성
+        
+        # with open으로 회사에서 제공된 iou계산을 위한 데이터 읽기
+        with open(DRIVE_PATH+"iou_index.txt","r") as f :
+            while True:
+                line = f.readline()
+                if not line: # 텍스트 줄이 끝까지 이동했을 경우 break
+                    break
+                list_coordinate = line.split("\t")
+                iou_coordinates.append(list_coordinate)
 
-        for i, row in enumerate(sheet.rows): #전체 행에 대하여 반복실행
-          # 만약 좌표가 x1y1, x2y2 기준으로 제공될 경우 아래부분은 주석후 사용할 것
-          # ***왼쪽 위와 오른쪽 아래 꼭짓점 기준***
-          iou_coordinates.append([
-              row[0].value, #1열 데이터
-              row[1].value, #2열 데이터
-              row[2].value, #3열 데이터
-              row[3].value, #4열 데이터
-              row[4].value, #5열 데이터
-          ])
+        # 배열 첫 번째(제목) 삭제
+        iou_coordinates.pop(0)
+        
+        # 메모장에서 다음 줄로 넘어가는 역할인 좌표 값 마지막에 있는 '\n' 삭제
+        iou_coordinates = [[element.strip() for element in row] for row in iou_coordinates]
 
-          # ***왼쪽 위 꼭짓점 기준***
-          # x,y,w,h, 기준 제공될 경우
-          # if i != 0:   # ***첫 줄에 아무표시 없을시 삭제***
-          #   iou_coordinates[i][3] = iou_coordinates[i][1] + iou_coordinates[i][3] # width
-          #   iou_coordinates[i][4] = iou_coordinates[i][2] + iou_coordinates[i][4] # height
 
-        iou_coordinates.pop(0)  # ***첫 줄에 아무표시 없을시 삭제***
-
-      elif filename_check[1] == "txt":    # txt 파일일 때
-        with open(filename, 'r') as file:
-          lines = file.readlines()
-
-        # 문자열 처리 및 리스트에 저장
-        iou_coordinates = [] # 리스트 자료형 생성
-        for i,line in enumerate(lines):
-          line = line.replace(',', '').replace('"', '').replace("'", "")
-          values = line.strip().split()  # 띄어쓰기 기준으로 문자열 분리하여 리스트로 변환
-          iou_coordinates.append(values)
-
-          # ***왼쪽 위 꼭짓점 기준***
-          # x,y,w,h, 기준 제공될 경우
-          # if i != 0:   # ***첫 줄에 아무표시 없을시 삭제***
-          #   iou_coordinates[i][3] = int(iou_coordinates[i][1]) + int(iou_coordinates[i][3]) # width
-          #   iou_coordinates[i][4] = int(iou_coordinates[i][2]) + int(iou_coordinates[i][4]) # height
-        iou_coordinates.pop(0)  # ***첫 줄에 아무표시 없을시 삭제***
+        print('*** iou 계산을 위해 제공된 좌표 값 ***')
         print(iou_coordinates)
 
-      print('*** iou 계산을 위해 제공된 좌표 값 ***')
-      str_iou_coordinates= []
-      for iou_coordinate in iou_coordinates :
-        str_iou_coordinate = [str(num) for num in iou_coordinate]
-        str_iou_coordinates.append(str_iou_coordinate)
-      print(str_iou_coordinates)
-
-      print('*** 인식된 상품 좌표 값 ***')
-      print(ls_temp)
+        print('*** 인식된 상품 좌표 값 ***')
+        print(detBoxList)
 
       productList = []
-      for str_iou_coordinate in str_iou_coordinates :
+      for iou_coordinate in iou_coordinates :
         temp_iou = []
-        for i in range(0,len(ls_temp)):
-          if str_iou_coordinate[0] == ls_temp[i][0]:
-            temp_iou.append(round(ioU(str_iou_coordinate,ls_temp[i]),2))
+        for i in range(0,len(detBoxList)):
+          if iou_coordinate[0] == detBoxList[i][0]:
+            temp_iou.append(round(ioU_calculate(iou_coordinate,detBoxList[i]),2))
 
         # 사각형 그리기
-        x1, y1, x2, y2 = map(int, str_iou_coordinate[1:5])
-        label = labels.loc[int(str_iou_coordinate[0])]["이름"]
+        x1, y1, x2, y2 = map(int, iou_coordinate[1:5])
+        label = labels.loc[int(iou_coordinate[0])]["이름"]
         im0 = plot_one_box([x1, y1, x2, y2], im0, label=None, color=(0, 0, 255), line_thickness=1)  # 빨간색으로 기존 물체 bounding box
 
-        print(f'{str_iou_coordinates.index(str_iou_coordinate)+1} / {len(str_iou_coordinates)} 결과')    
+        # 결과 값 PRINT
+        print(f'{iou_coordinates.index(iou_coordinate)+1} / {len(iou_coordinates)} 결과')
         if temp_iou:
           print(temp_iou)
-          print([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])    
-          productList.append([labels.loc[int(str_iou_coordinate[0])]["이름"],max(temp_iou)])
+          print([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])    
+          productList.append([labels.loc[int(iou_coordinate[0])]["이름"],max(temp_iou)])
         else:
           print("*** 같은 클래스의 Object가 없습니다! ***")
 
-      # im0 = annotator.result()  
+        # im0 = annotator.result()  
 
-      f=open('cjproject_result.txt','w')
-      for product in productList:
-          data=f'{product[0]} {product[1]}\n'
-          f.write(data)
-      f.close()
-      print('*** 데이터 저장 완료 ***\n')
-      print('result : cjproject_result.txt')
+        # 결과 값 TXT 파일로 추출
+        download_result_txt(productList)
 
       return im0
 
@@ -222,7 +205,7 @@ def detect(save_img=False):
 
             # annotator = Annotator(im0, line_width=line_thickness, example=str('박스이름'))
             
-            ls_temp=[] # 감지된 바운딩 박스의 좌표 값을 IoU계산을 위해 잠시 담아두는 리스트.
+            detBoxList = [] # 감지된 바운딩 박스의 좌표 값을 IoU계산을 위해 잠시 담아두는 리스트.
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -247,8 +230,8 @@ def detect(save_img=False):
                         coordinate = temp_line.split()
                         # IoU 계산을 위해 잠시 리스트에 담기
                         coordinate[0] = names[int(cls)]
-                        ls_temp.append(coordinate)
-                        print(ls_temp)
+                        detBoxList.append(coordinate)
+                        print(detBoxList)
 
                         label = f'{(labels.loc[int(names[int(cls)])]["이름"])} {conf:.2f}'                  
                         im0 = plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
@@ -261,7 +244,7 @@ def detect(save_img=False):
               if view_img:
                   cv2.imshow(str(p), im0)
                   cv2.waitKey(1)  # 1 millisecond
-              im0 = ioU_index(ls_temp, im0) # 처음 박스를 그리고 위에 기존 박스 위치 그려줌
+              im0 = ioU_result(detBoxList, im0) # 처음 박스를 그리고 위에 기존 박스 위치 그려줌
 
             # Save results (image with detections)
             if save_img:
