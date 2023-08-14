@@ -96,11 +96,6 @@ def detect(save_img=False):
         
     # 제공된 IoU 데이터를 통`해 결과값을 도출해내는 함수
     def ioU_result(detBoxList, im0):
-        # yolo 버전 7일 경우, iou 데이터 값 path
-        filename = "/content/yolov7/iou.txt"
-        # yolo 버전 5일 경우, iou 데이터 값 path
-        # filename = "/content/yolov5/iou.txt"
-        
         iou_coordinates = [] #리스트 자료형 생성
         
         # with open으로 회사에서 제공된 iou계산을 위한 데이터 읽기
